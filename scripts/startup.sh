@@ -254,9 +254,11 @@ drivessd
 # @description Gather username and password to be used for installation. 
 userinfo () {
 read -p "Please enter your username: " username
+echo $username
 set_option USERNAME ${username,,} # convert to lower case as in issue #109 
+echo $username
 while true; do
-  echo -ne "Please enter your password: \n"
+  echo -ne $username " Please enter your password: \n"
   read -s password # read password without echo
 
   echo -ne "Please repeat your password: \n"
