@@ -1,0 +1,160 @@
+# pacman-pkgs.txt
+# Packages installed by 1-setup.sh via pacman.
+# Lines above --END OF MINIMAL INSTALL-- are installed for both FULL and MINIMAL.
+# Lines below are FULL only.
+# Blank lines and lines starting with # are ignored.
+
+# ── Core system ───────────────────────────────────────────────────────────────
+mesa
+xorg-xwayland
+xwaylandvideobridge
+base-devel
+binutils
+dosfstools
+linux-headers
+usbutils
+pciutils
+xdg-user-dirs
+xdg-utils
+
+# ── Fonts ─────────────────────────────────────────────────────────────────────
+noto-fonts
+noto-fonts-emoji
+noto-fonts-cjk
+ttf-dejavu
+ttf-liberation
+ttf-droid
+ttf-hack
+ttf-roboto
+powerline-fonts
+awesome-terminal-fonts
+
+# ── Libraries ─────────────────────────────────────────────────────────────────
+libx11
+libxft
+libxinerama
+freetype2
+fwupd
+
+--END OF MINIMAL INSTALL--
+
+# ── Audio (PipeWire stack) ─────────────────────────────────────────────────────
+# Note: PipeWire replaces PulseAudio. Do NOT install pulseaudio alongside it.
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+pipewire-v4l2
+pipewire-zeroconf
+wireplumber
+alsa-plugins
+alsa-utils
+gst-libav
+gst-plugins-good
+gst-plugins-ugly
+libdvdcss
+
+# ── Development tools ─────────────────────────────────────────────────────────
+autoconf
+automake
+bison
+flex
+gcc
+libtool
+m4
+make
+patch
+pkgconf
+git
+python
+python-pip
+python-pyqt5
+python-notify2
+python-psutil
+python-pyserial
+
+# ── Networking ────────────────────────────────────────────────────────────────
+bind
+openssh
+openbsd-netcat
+traceroute
+wireguard-tools
+wireless_tools
+systemd-resolvconf
+ntp
+
+# ── Bluetooth ─────────────────────────────────────────────────────────────────
+bluez
+bluez-libs
+bluez-utils
+
+# ── Printing ──────────────────────────────────────────────────────────────────
+cups
+
+# ── File systems ──────────────────────────────────────────────────────────────
+ntfs-3g
+exfat-utils
+fuse2
+fuse3
+fuseiso
+btrfs-progs
+dosfstools
+lzop
+p7zip
+unrar
+unzip
+zip
+
+# ── System tools ──────────────────────────────────────────────────────────────
+bash-completion
+dialog
+dmidecode
+efibootmgr
+htop
+lsof
+os-prober
+snapper
+snap-pac
+terminus-font
+which
+haveged
+fastfetch
+reflector
+avahi
+
+# ── Virtualization (QEMU/KVM/libvirt) ────────────────────────────────────────
+qemu-full
+libvirt
+virt-manager
+virt-viewer
+dnsmasq
+bridge-utils
+swtpm
+edk2-ovmf
+dtc
+cronie
+
+# ── Gaming ────────────────────────────────────────────────────────────────────
+steam
+lutris
+gamemode
+lib32-gamemode
+wine
+wine-gecko
+wine-mono
+winetricks
+
+# ── Applications ──────────────────────────────────────────────────────────────
+code
+discord
+firefox
+gimp
+gparted
+gptfdisk
+handbrake
+synergy
+thunderbird
+ufw
+
+# ── Entropy ───────────────────────────────────────────────────────────────────
+rng-tools

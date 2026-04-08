@@ -1,0 +1,72 @@
+# kde.txt
+# KDE Plasma packages installed by 2-user.sh.
+# Minimal = core desktop to get KDE running.
+# Full = complete KDE experience with apps and integrations.
+
+# ── Minimal: core Plasma desktop ──────────────────────────────────────────────
+plasma-desktop
+sddm
+sddm-kcm
+dolphin
+konsole
+plasma-nm
+plasma-pa
+powerdevil
+kscreen
+systemsettings
+
+--END OF MINIMAL INSTALL--
+
+# ── Full: complete KDE suite ───────────────────────────────────────────────────
+
+# Core Plasma components
+bluedevil
+breeze
+breeze-gtk
+kdeplasma-addons
+kgamma
+kinfocenter
+kpipewire
+kwayland-integration
+layer-shell-qt
+milou
+plasma-browser-integration
+plasma-systemmonitor
+xdg-desktop-portal-kde
+
+# Wayland/display
+egl-wayland
+kwin
+
+# Applications
+filelight
+gwenview
+kate
+kcalc
+kdeconnect
+kgpg
+okular
+partitionmanager
+print-manager
+spectacle
+
+# KDE account/wallet integration
+kaccounts-integration
+kaccounts-providers
+kde-gtk-config
+kwallet-pam
+kwalletmanager
+
+# KDE framework libraries (needed by various KDE apps)
+kcodecs
+kcoreaddons
+extra-cmake-modules
+
+# Theme engine for Qt apps (used by Arc Dark and Sweet)
+kvantum
+
+# KDE theming
+packagekit-qt6
+
+# Discover software center
+discover

@@ -1,0 +1,32 @@
+# aur-pkgs.txt
+# AUR packages installed by 2-user.sh via paru.
+# Ham radio and GPS packages are handled separately based on install options.
+
+# ── Minimal AUR packages ───────────────────────────────────────────────────────
+# (none required for minimal install)
+
+--END OF MINIMAL INSTALL--
+
+# ── Full: themes ──────────────────────────────────────────────────────────────
+# arc-kde: Arc Dark KDE Plasma theme + Aurorae window decoration + Kvantum theme
+arc-kde
+
+# arc-gtk-theme-git: GTK theme for Arc Dark (GTK2/3/4 apps inside Plasma)
+# Using -git version because the stable AUR package is flagged out of date.
+arc-gtk-theme-git
+
+# KDE Sweet theme — installed as an alternative, NOT set as default.
+# If these fail to build, install manually from https://store.kde.org/p/1294174
+# sweet-kde provides the Plasma theme; sweet-theme-git provides the GTK theme.
+sweet-kde
+sweet-theme-git
+
+# ── Full: fonts ───────────────────────────────────────────────────────────────
+ttf-meslo-nerd
+ttf-firacode-nerd
+
+# ── Full: system tools ────────────────────────────────────────────────────────
+btrfs-assistant
+
+# ── Full: applications ────────────────────────────────────────────────────────
+github-desktop-bin
