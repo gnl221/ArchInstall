@@ -16,7 +16,9 @@ echo "==> Installing GRUB, grub-btrfs, and inotify-tools..."
 pacman -S --noconfirm --needed grub efibootmgr os-prober grub-btrfs inotify-tools
 
 # grub-btrfs provides the grub-btrfs-overlayfs mkinitcpio hook.
-# Add it now and rebuild initramfs so snapshot boots get overlayfs write layer.
+# Now that the package is installed, add the hook and rebuild the initramfs.
+# This hook lets you boot into a read-only snapper snapshot with an overlayfs
+# write layer, so services requiring a writable /var (like SDDM) still start.
 echo "==> Adding grub-btrfs-overlayfs hook to mkinitcpio and rebuilding..."
 sed -i '/^HOOKS=/ s/fsck)/fsck grub-btrfs-overlayfs)/' /etc/mkinitcpio.conf
 mkinitcpio -P
@@ -29,56 +31,68 @@ if [[ -d /sys/firmware/efi ]]; then
 fi
 
 # ─── GRUB: kernel parameters ──────────────────────────────────────────────────
+# rootflags=subvol=@ — ensures GRUB knows the BTRFS root subvolume name
+# quiet splash      — clean boot with Plymouth splash
 sed -i 's|GRUB_CMDLINE_LINUX_DEFAULT=".*"|GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 audit=0 rootflags=subvol=@"|' \
     /etc/default/grub
+# Enable os-prober for dual-boot detection
 sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/' \
     /etc/default/grub
 
 # ─── GRUB: hex-arch theme ─────────────────────────────────────────────────────
+# Theme files expected at: configs/boot/grub/themes/hex-arch/
+# Place all theme assets (background_arch.png, *.png, theme.txt, fonts/)
+# in that directory within this repo before running the installer.
 echo "==> Installing hex-arch GRUB theme..."
 THEME_DIR="/boot/grub/themes"
 THEME_NAME="hex-arch"
 THEME_SRC="$HOME/ArchScript/configs/boot/grub/themes/$THEME_NAME"
 
-echo "    Looking for theme at: $THEME_SRC"
 if [[ -d "$THEME_SRC" ]]; then
     mkdir -p "${THEME_DIR}/${THEME_NAME}"
     cp -a "$THEME_SRC/." "${THEME_DIR}/${THEME_NAME}/"
+    # Set theme in GRUB config
     grep -q "GRUB_THEME=" /etc/default/grub && \
         sed -i '/GRUB_THEME=/d' /etc/default/grub
     echo "GRUB_THEME=\"${THEME_DIR}/${THEME_NAME}/theme.txt\"" >> /etc/default/grub
-    echo "    hex-arch theme installed."
+    echo "hex-arch theme installed."
 else
-    echo "    hex-arch not found — GRUB will use the default theme."
+    echo "WARNING: Theme source not found at $THEME_SRC"
+    echo "         Place hex-arch theme files in configs/boot/grub/themes/hex-arch/"
+    echo "         GRUB will use the default theme."
 fi
 
 # ─── Plymouth ─────────────────────────────────────────────────────────────────
+# Install Plymouth before grub-mkconfig so the splash hook is in the initramfs
+# that GRUB points to, and the 'splash' kernel param is already set above.
 echo "==> Installing Plymouth boot splash..."
 pacman -S --noconfirm --needed plymouth
 
-# Insert 'plymouth' hook after 'udev', before block/filesystems
+# Insert 'plymouth' after 'udev' in the HOOKS array.
+# It must come before 'encrypt', 'block', and 'filesystems'.
 sed -i 's/HOOKS=(base udev/HOOKS=(base udev plymouth/' /etc/mkinitcpio.conf
 
 PLYMOUTH_THEMES_DIR="$HOME/ArchScript/configs/usr/share/plymouth/themes"
 PLYMOUTH_THEME="arch-glow"
 
-echo "    Looking for Plymouth theme at: ${PLYMOUTH_THEMES_DIR}/${PLYMOUTH_THEME}"
 if [[ -d "${PLYMOUTH_THEMES_DIR}/${PLYMOUTH_THEME}" ]]; then
     mkdir -p /usr/share/plymouth/themes
     cp -rf "${PLYMOUTH_THEMES_DIR}/${PLYMOUTH_THEME}" /usr/share/plymouth/themes/
-    # -R sets theme AND rebuilds initramfs
+    # -R rebuilds the initramfs with the new theme — no separate mkinitcpio -P needed
     plymouth-set-default-theme -R "$PLYMOUTH_THEME"
-    echo "    arch-glow Plymouth theme installed."
+    echo "Plymouth arch-glow theme installed."
 else
-    echo "    arch-glow not found — using default Plymouth theme."
+    echo "WARNING: Plymouth theme not found at ${PLYMOUTH_THEMES_DIR}/${PLYMOUTH_THEME}"
+    echo "         Place arch-glow theme in configs/usr/share/plymouth/themes/arch-glow/"
+    echo "         Plymouth will use the default (text) theme until you add the files."
     mkinitcpio -P
 fi
 
 # ─── GRUB: generate config ────────────────────────────────────────────────────
-# Run after Plymouth so initramfs already contains the plymouth hook
+# Run after Plymouth so initramfs already contains the plymouth hook.
 grub-mkconfig -o /boot/grub/grub.cfg
 
-# ─── SDDM ─────────────────────────────────────────────────────────────────────
+# ─── SDDM (login manager) ─────────────────────────────────────────────────────
 echo "==> Configuring SDDM..."
 mkdir -p /etc/sddm.conf.d
 cat > /etc/sddm.conf.d/kde_settings.conf <<'EOF'
@@ -95,19 +109,23 @@ systemctl enable sddm.service
 
 # ─── Snapper: automatic BTRFS snapshots ───────────────────────────────────────
 echo "==> Setting up snapper for automatic snapshots..."
-pacman -S --noconfirm --needed snapper snap-pac btrfs-assistant
+
+# Install snapper and btrfs-assistant FIRST — before snap-pac.
+# snap-pac fires a pacman post-transaction hook the instant it's installed.
+# That hook tries to create a snapper snapshot, which fails if snapper isn't
+# configured yet. So: install snapper → configure → then install snap-pac.
+pacman -S --noconfirm --needed snapper btrfs-assistant
 
 # Snapper setup with pre-created @snapshots subvolume:
-# 1. Unmount @snapshots — snapper's create-config needs /.snapshots to not exist
-# 2. snapper create-config — creates /etc/snapper/configs/root and a nested subvol
-# 3. Delete the nested subvolume snapper created (we already have @snapshots)
+# 1. Unmount @snapshots — snapper's create-config needs /.snapshots absent
+# 2. snapper --no-dbus create-config — creates /etc/snapper/configs/root
+# 3. Delete the nested subvolume snapper created inside @ (we have @snapshots)
 # 4. Remount our top-level @snapshots back onto /.snapshots
 umount /.snapshots 2>/dev/null || true
 rm -rf /.snapshots
 
-# --no-dbus is REQUIRED in a chroot — there is no DBus session.
-# Without it: "fatal library error, lookup self" / ServiceUnknown errors
-# and the config file is never created, causing every subsequent sed to fail.
+# --no-dbus is REQUIRED in a chroot — no DBus session exists.
+# Without it: "fatal library error, lookup self" / ServiceUnknown errors.
 snapper --no-dbus -c root create-config /
 
 btrfs subvolume delete /.snapshots
@@ -133,24 +151,33 @@ sed -i "s/^ALLOW_USERS=.*/ALLOW_USERS=\"$USERNAME\"/" /etc/snapper/configs/root
 sed -i "s/^ALLOW_GROUPS=.*/ALLOW_GROUPS=\"wheel\"/"   /etc/snapper/configs/root
 sed -i 's/^SYNC_ACL=.*/SYNC_ACL="yes"/'               /etc/snapper/configs/root
 
+# NOW install snap-pac — its post-transaction hook finds a valid config and works.
+pacman -S --noconfirm --needed snap-pac
+
 systemctl enable snapper-timeline.timer
 systemctl enable snapper-cleanup.timer
 systemctl enable grub-btrfsd
 
-# Also needs --no-dbus in chroot
-snapper --no-dbus -c root create --description "Base Install" --cleanup-algorithm number
+# Note: no initial snapshot here. Creating a btrfs snapshot of / while inside
+# a chroot with running processes fails with ETXTBSY (errno 26 — "Text file busy").
+# The first timeline snapshot happens automatically after first boot.
+# Every pacman operation after boot will create pre/post snapshots via snap-pac.
 
 # ─── Core services ────────────────────────────────────────────────────────────
 echo "==> Enabling system services..."
+# Always-available services (packages installed in MINIMAL)
 systemctl enable avahi-daemon.service
 systemctl enable fstrim.timer
-systemctl enable reflector.timer 2>/dev/null || echo "  reflector.timer: not found, skipping"
+systemctl enable reflector.timer
 systemctl disable dhcpcd.service 2>/dev/null || true
 
-# FULL-only services — guard with || so MINIMAL installs don't abort
-systemctl enable bluetooth    2>/dev/null || echo "  bluetooth: skipped (bluez not installed)"
-systemctl enable cups.service 2>/dev/null || echo "  cups: skipped (cups not installed)"
-systemctl enable cronie       2>/dev/null || echo "  cronie: skipped (cronie not installed)"
+# FULL-install services — packages in FULL section of pacman-pkgs.txt
+# Using || true so they don't abort the script on a MINIMAL install
+systemctl enable bluetooth      2>/dev/null || echo "  bluetooth: skipped (bluez not installed)"
+systemctl enable cups.service   2>/dev/null || echo "  cups: skipped (cups not installed)"
+systemctl enable cronie         2>/dev/null || echo "  cronie: skipped (cronie not installed)"
+
+# Virtualization — FULL only, package is qemu-full + libvirt
 systemctl enable libvirtd.service 2>/dev/null || echo "  libvirtd: skipped (libvirt not installed)"
 
 # ─── Reflector config ─────────────────────────────────────────────────────────
@@ -166,9 +193,9 @@ EOF
 
 # ─── Restore sudo: require password ───────────────────────────────────────────
 echo "==> Finalizing sudo configuration..."
-sed -i 's/^%wheel ALL=(ALL) NOPASSWD: ALL/# %wheel ALL=(ALL) NOPASSWD: ALL/'         /etc/sudoers
+sed -i 's/^%wheel ALL=(ALL) NOPASSWD: ALL/# %wheel ALL=(ALL) NOPASSWD: ALL/'     /etc/sudoers
 sed -i 's/^%wheel ALL=(ALL:ALL) NOPASSWD: ALL/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/' /etc/sudoers
-sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/'         /etc/sudoers
+sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/'     /etc/sudoers
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
 # ─── Cleanup ──────────────────────────────────────────────────────────────────
@@ -179,5 +206,13 @@ rm -rf "/home/$USERNAME/ArchScript"
 echo -ne "
 ────────────────────────────────────────────
   Stage 3 complete.
+  Post-install notes:
+  • GRUB theme: place hex-arch files in
+      configs/boot/grub/themes/hex-arch/
+  • Plymouth theme: place arch-glow files in
+      configs/usr/share/plymouth/themes/arch-glow/
+  • Snapper: run 'snapper list' to verify.
+  • btrfs-assistant: GUI for snapshot management.
+  • Ctrl+Alt+T opens Konsole (set at first login).
 ────────────────────────────────────────────
 "

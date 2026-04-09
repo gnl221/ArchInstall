@@ -1,7 +1,7 @@
 # pacman-pkgs.txt
 # Packages installed by 1-setup.sh via pacman.
-# Lines above --END OF MINIMAL INSTALL-- are installed for both FULL and MINIMAL.
-# Lines below are FULL only.
+# Packages above the marker install on all install types.
+# Packages below the marker install on full installs only.
 # Blank lines and lines starting with # are ignored.
 
 # ── Core system ───────────────────────────────────────────────────────────────
@@ -35,6 +35,9 @@ libxft
 libxinerama
 freetype2
 fwupd
+reflector
+avahi
+curl
 
 --END OF MINIMAL INSTALL--
 
@@ -81,7 +84,6 @@ traceroute
 wireguard-tools
 wireless_tools
 systemd-resolvconf
-ntp
 
 # ── Bluetooth ─────────────────────────────────────────────────────────────────
 bluez
@@ -93,12 +95,11 @@ cups
 
 # ── File systems ──────────────────────────────────────────────────────────────
 ntfs-3g
-exfat-utils
+exfatprogs
 fuse2
 fuse3
 fuseiso
 btrfs-progs
-dosfstools
 lzop
 p7zip
 unrar
@@ -113,14 +114,10 @@ efibootmgr
 htop
 lsof
 os-prober
-snapper
-snap-pac
 terminus-font
 which
 haveged
 fastfetch
-reflector
-avahi
 
 # ── Virtualization (QEMU/KVM/libvirt) ────────────────────────────────────────
 qemu-full

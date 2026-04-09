@@ -73,7 +73,6 @@ echo "==> Creating user: $USERNAME"
 #   plugdev — USB device access (CHIRP, USB GPS)
 #   libvirt — virtualization management
 groupadd -f libvirt
-groupadd -f plugdev  # Arch doesn't create this by default; needed for CHIRP/USB GPS
 useradd -m -G wheel,audio,video,storage,optical,uucp,plugdev,libvirt \
     -s /bin/bash "$USERNAME"
 echo "$USERNAME:$PASSWORD" | chpasswd
@@ -119,12 +118,19 @@ fi
 
 # ─── Base system packages ─────────────────────────────────────────────────────
 echo "==> Installing base system packages..."
-# Installs everything up to (and optionally including) --END OF MINIMAL INSTALL--
-# When INSTALL_TYPE=FULL, reads the entire file; MINIMAL stops at the marker.
-sed -n "/${INSTALL_TYPE}/q;p" "$HOME/ArchScript/pkg-files/pacman-pkgs.txt" | \
-while read -r line; do
-    [[ "$line" == '--END OF MINIMAL INSTALL--' ]] && continue
-    [[ -z "$line" || "$line" =~ ^# ]]             && continue
+# For MINIMAL: read up to the --END OF MINIMAL INSTALL-- marker.
+# For FULL: read the entire file.
+# We cannot use sed -n "/$INSTALL_TYPE/q;p" because "FULL" and "MINIMAL" appear
+# in comments, causing the pattern to quit before any packages are read.
+if [[ "$INSTALL_TYPE" == "MINIMAL" ]]; then
+    PKG_CONTENT=$(sed -n '/--END OF MINIMAL INSTALL--/q;p' \
+        "$HOME/ArchScript/pkg-files/pacman-pkgs.txt")
+else
+    PKG_CONTENT=$(cat "$HOME/ArchScript/pkg-files/pacman-pkgs.txt")
+fi
+
+echo "$PKG_CONTENT" | while read -r line; do
+    [[ -z "$line" || "$line" =~ ^# || "$line" == '--END OF MINIMAL INSTALL--' ]] && continue
     echo "Installing: $line"
     pacman -S --noconfirm --needed "$line"
 done

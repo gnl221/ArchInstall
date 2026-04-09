@@ -17,10 +17,15 @@ mkdir -p "$HOME/.cache" "$HOME/.config"
 
 # ─── KDE packages ─────────────────────────────────────────────────────────────
 echo "==> Installing KDE packages..."
-sed -n "/${INSTALL_TYPE}/q;p" "$HOME/ArchScript/pkg-files/kde.txt" | \
-while read -r line; do
-    [[ "$line" == '--END OF MINIMAL INSTALL--' ]] && continue
-    [[ -z "$line" || "$line" =~ ^# ]]             && continue
+if [[ "$INSTALL_TYPE" == "MINIMAL" ]]; then
+    KDE_CONTENT=$(sed -n '/--END OF MINIMAL INSTALL--/q;p' \
+        "$HOME/ArchScript/pkg-files/kde.txt")
+else
+    KDE_CONTENT=$(cat "$HOME/ArchScript/pkg-files/kde.txt")
+fi
+
+echo "$KDE_CONTENT" | while read -r line; do
+    [[ -z "$line" || "$line" =~ ^# || "$line" == '--END OF MINIMAL INSTALL--' ]] && continue
     echo "Installing: $line"
     sudo pacman -S --noconfirm --needed "$line"
 done
@@ -46,10 +51,15 @@ EOF
 
 # ─── AUR packages ─────────────────────────────────────────────────────────────
 echo "==> Installing AUR packages..."
-sed -n "/${INSTALL_TYPE}/q;p" "$HOME/ArchScript/pkg-files/aur-pkgs.txt" | \
-while read -r line; do
-    [[ "$line" == '--END OF MINIMAL INSTALL--' ]] && continue
-    [[ -z "$line" || "$line" =~ ^# ]]             && continue
+if [[ "$INSTALL_TYPE" == "MINIMAL" ]]; then
+    AUR_CONTENT=$(sed -n '/--END OF MINIMAL INSTALL--/q;p' \
+        "$HOME/ArchScript/pkg-files/aur-pkgs.txt")
+else
+    AUR_CONTENT=$(cat "$HOME/ArchScript/pkg-files/aur-pkgs.txt")
+fi
+
+echo "$AUR_CONTENT" | while read -r line; do
+    [[ -z "$line" || "$line" =~ ^# || "$line" == '--END OF MINIMAL INSTALL--' ]] && continue
     echo "Installing (AUR): $line"
     paru -S --noconfirm --needed "$line"
 done
@@ -63,11 +73,11 @@ if [[ "$HAM_RADIO" == "YES" ]]; then
         fldigi \
         python-pyserial \
         python-requests \
-        python-pip \
-        jdk-openjdk
+        python-pip
 
     echo "==> Installing ham radio software (AUR)..."
     # wsjtx-improved: FT8, FT4, MSK144, WSPR, Q65
+    # Note: wsjtx-improved-al-qt6 is the Qt6 build — swap if preferred
     paru -S --noconfirm --needed wsjtx-improved
 
     # js8call-improved: active fork of JS8Call
@@ -85,6 +95,8 @@ if [[ "${USE_GPS:-NO}" == "YES" ]]; then
     echo "==> Installing GPS support..."
     sudo pacman -S --noconfirm --needed gpsd python-gps chrony
 
+    # chrony.conf: GPS SHM refclock (NMEA on SHM 0, PPS on SHM 2)
+    # Requires gpsd running. Adjust offset/delay per your GPS puck.
     sudo tee /etc/chrony.conf > /dev/null <<'EOF'
 # chrony.conf — GPS SHM time source + NTP fallback
 # SHM 0 = NMEA data from gpsd (~100ms accuracy)
@@ -97,6 +109,7 @@ server 1.arch.pool.ntp.org iburst
 server 2.arch.pool.ntp.org iburst
 server 3.arch.pool.ntp.org iburst
 
+# Uncomment to serve time to local network devices (e.g. other shack gear)
 # allow 192.168.0.0/16
 
 makestep 1.0 3
@@ -105,6 +118,7 @@ driftfile /var/lib/chrony/drift
 logdir /var/log/chrony
 EOF
 
+    # udev rules: auto-link USB GPS devices to /dev/gps0 and auto-start gpsd
     sudo tee /etc/udev/rules.d/99-usb-gps.rules > /dev/null <<'EOF'
 # u-blox GPS (Prolific USB-Serial, covers many GPS pucks)
 SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", \
@@ -135,28 +149,19 @@ echo "==> Installing themes..."
 paru -S --noconfirm --needed sweet-kde sweet-theme-git || \
     echo "WARNING: Sweet theme AUR build failed — install manually from https://store.kde.org/p/1294174"
 
-# ─── Apply Breeze Dark (built into KDE — no extra packages needed) ────────────
+# ─── Apply Breeze Dark theme (built into KDE, no extra packages needed) ────────
 echo "==> Applying Breeze Dark theme..."
 
-# Plasma shell theme
 kwriteconfig6 --file plasmarc   --group Theme --key name "breeze-dark"
-
-# Color scheme
 kwriteconfig6 --file kdeglobals --group General --key ColorScheme "BreezeDark"
-
-# Application widget style
 kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle "Breeze"
-
-# Icon theme
 kwriteconfig6 --file kdeglobals --group Icons --key Theme "breeze-dark"
-
-# Window decoration
 kwriteconfig6 --file kwinrc --group "org.kde.kdecoration2" \
     --key library "org.kde.breeze"
 kwriteconfig6 --file kwinrc --group "org.kde.kdecoration2" \
     --key theme "Breeze"
 
-# GTK 3/4 apps — Breeze-Dark from breeze-gtk (ships with plasma-meta)
+# GTK 3/4 — Breeze-Dark ships with plasma-meta via breeze-gtk
 mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
 cat > "$HOME/.config/gtk-3.0/settings.ini" <<'EOF'
 [Settings]
@@ -167,7 +172,7 @@ gtk-font-name=Noto Sans 10
 EOF
 cp "$HOME/.config/gtk-3.0/settings.ini" "$HOME/.config/gtk-4.0/settings.ini"
 
-# GTK 2 (correct location: ~/.gtkrc-2.0)
+# GTK 2 (correct path: ~/.gtkrc-2.0)
 cat > "$HOME/.gtkrc-2.0" <<'EOF'
 gtk-theme-name="Breeze-Dark"
 gtk-icon-theme-name="breeze-dark"
@@ -177,6 +182,8 @@ EOF
 
 # ─── Konsole shortcut: Ctrl+Alt+T ─────────────────────────────────────────────
 echo "==> Setting Ctrl+Alt+T shortcut for Konsole..."
+mkdir -p "$HOME/.config"
+# Append to kglobalshortcutsrc — creates the section if it doesn't exist
 if ! grep -q "\[org.kde.konsole.desktop\]" "$HOME/.config/kglobalshortcutsrc" 2>/dev/null; then
     cat >> "$HOME/.config/kglobalshortcutsrc" <<'EOF'
 
@@ -188,6 +195,7 @@ fi
 # ─── .bashrc ──────────────────────────────────────────────────────────────────
 echo "==> Installing .bashrc..."
 cp "$HOME/ArchScript/configs/_bashrc" "$HOME/.bashrc"
+# Also copy root's bashrc
 sudo cp "$HOME/ArchScript/configs/_bashrc" /root/.bashrc
 
 # ─── XDG user directories ─────────────────────────────────────────────────────

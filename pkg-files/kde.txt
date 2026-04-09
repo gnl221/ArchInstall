@@ -39,6 +39,7 @@ egl-wayland
 kwin
 
 # Applications
+ark
 filelight
 gwenview
 kate

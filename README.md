@@ -12,8 +12,8 @@ Boot the Arch ISO, connect to the internet, then:
 
 ```bash
 pacman -Sy --noconfirm git
-git clone https://github.com/YOUR_USER/ArchInstall
-cd ArchScript
+git clone https://github.com/gnl221/ArchInstall
+cd ArchInstall
 bash archinstall.sh
 ```
 
@@ -52,6 +52,34 @@ archinstall.sh
 
 ---
 
+## Required repo structure
+
+```
+archinstall.sh
+configs/
+  _bashrc
+  boot/grub/themes/hex-arch/     ← add theme files here
+    theme.txt
+    background_arch.png
+    fonts/
+    *.png
+  usr/share/plymouth/themes/arch-glow/  ← add theme files here
+    arch-glow.plymouth
+    arch-glow.script
+pkg-files/
+  pacman-pkgs.txt
+  kde.txt
+  aur-pkgs.txt
+scripts/
+  startup.sh
+  0-preinstall.sh
+  1-setup.sh
+  2-user.sh
+  3-post-setup.sh
+```
+
+---
+
 ## BTRFS subvolume layout
 
 | Subvolume           | Mountpoint              | Purpose                              |
@@ -62,116 +90,76 @@ archinstall.sh
 | `@var_log`          | `/var/log`              | Logs persist across rollbacks        |
 | `@var_cache_pacman` | `/var/cache/pacman/pkg` | Package cache excluded from snapshots|
 
-Mount options (SSD): `noatime,compress=zstd,ssd,space_cache=v2,commit=120`
-Mount options (HDD): `noatime,compress=zstd,space_cache=v2,commit=120`
-
----
-
-## Required files — add these to the repo before installing
-
-### GRUB theme (hex-arch)
-Place all hex-arch theme assets here:
-```
-configs/boot/grub/themes/hex-arch/
-  theme.txt
-  background_arch.png
-  select_*.png
-  sb_thumb_*.png
-  sb_frame_*.png
-  progress_bar_*.png
-  progress_highlight_*.png
-  fonts/
-```
-The `theme.txt` you already have is included in this repo.
-
-### Plymouth theme (arch-glow)
-Place arch-glow theme assets here:
-```
-configs/usr/share/plymouth/themes/arch-glow/
-  arch-glow.plymouth
-  arch-glow.script
-  (images/)
-```
+Mount options (SSD/NVMe): `noatime,compress=zstd,ssd,space_cache=v2,commit=120`
+Mount options (HDD):      `noatime,compress=zstd,space_cache=v2,commit=120`
 
 ---
 
 ## Themes installed
 
-| Theme        | Type         | Source     | Default? |
-|--------------|--------------|------------|----------|
-| Arc Dark     | KDE + GTK    | pacman/AUR | ✅ Yes   |
-| KDE Sweet    | KDE + GTK    | AUR        | ❌ No    |
+| Theme       | Source | Default? | Notes                          |
+|-------------|--------|----------|--------------------------------|
+| Breeze Dark | KDE    | ✅ Yes   | Built into KDE, no package needed |
+| KDE Sweet   | AUR    | ❌ No    | Installed, apply via System Settings |
 
-To apply Sweet KDE after install: System Settings → Appearance → Global Theme → Sweet.
-
-Arc Dark packages: `arc-gtk-theme` (pacman) + `arc-kde` (AUR)
-Sweet packages: `sweet-kde` + `sweet-theme-git` (both AUR)
+To apply Sweet KDE: System Settings → Appearance → Global Theme → Sweet
 
 ---
 
 ## Ham radio packages (optional — selected during install)
 
-| Package          | Source | Purpose                                   |
-|------------------|--------|-------------------------------------------|
-| `wsjtx-improved` | AUR    | FT8, FT4, MSK144, WSPR, Q65             |
-| `js8call-improved`| AUR   | Active JS8Call development fork           |
-| `chirp-next`     | AUR    | Radio programmer (AnyTone, Baofeng, etc.) |
-| `pat-bin`        | AUR    | Winlink email over radio                  |
-| `direwolf`       | pacman | Software TNC for APRS/VHF packet          |
-| `fldigi`         | pacman | Multimode digital (PSK31, RTTY, etc.)     |
-| `hamlib`         | pacman | CAT rig control library                   |
+| Package           | Source | Purpose                                    |
+|-------------------|--------|--------------------------------------------|
+| `wsjtx-improved`  | AUR    | FT8, FT4, MSK144, WSPR, Q65              |
+| `js8call-improved`| AUR    | Active JS8Call development fork            |
+| `chirp-next`      | AUR    | Radio programmer (AnyTone, Baofeng, etc.)  |
+| `pat-bin`         | AUR    | Winlink email over radio                   |
+| `direwolf`        | pacman | Software TNC for APRS/VHF packet           |
+| `fldigi`          | pacman | Multimode digital (PSK31, RTTY, etc.)      |
+| `hamlib`          | pacman | CAT rig control library                    |
 
-Your user is added to the `uucp` group for serial port access (CAT control, GPS).
+Your user is added to `uucp` (serial ports) and `plugdev` (USB devices) groups.
 
 ---
 
 ## GPS packages (optional — shown only if Ham Radio = Yes)
 
-| Package       | Purpose                              |
-|---------------|--------------------------------------|
-| `gpsd`        | GPS daemon, socket-activated         |
-| `python-gps`  | Python bindings for gpsd             |
-| `chrony`      | NTP with GPS SHM time source         |
-
-A udev rule is installed to auto-link USB GPS devices to `/dev/gps0` and
-auto-start gpsd. Covers u-blox (Prolific + native VID), FTDI, and Garmin GPS-18.
+| Package      | Purpose                              |
+|--------------|--------------------------------------|
+| `gpsd`       | GPS daemon, socket-activated         |
+| `python-gps` | Python bindings for gpsd             |
+| `chrony`     | NTP with GPS SHM time source         |
 
 `/etc/chrony.conf` is pre-configured with SHM 0 (NMEA) and SHM 2 (PPS) refclocks.
+A udev rule auto-links USB GPS devices to `/dev/gps0` and auto-starts gpsd.
+Covers: u-blox (Prolific + native VID), FTDI, Garmin GPS-18.
 
 ---
 
 ## Snapper snapshot management
 
-Automatic snapshots happen via `snap-pac` (pacman hooks) — every install/update
-creates a pre/post snapshot pair. Timeline snapshots run hourly via systemd timer.
+Snapshots are created automatically by `snap-pac` on every pacman install/update
+(pre + post pairs). Timeline snapshots run hourly via `snapper-timeline.timer`.
+GRUB shows bootable snapshots via `grub-btrfsd`.
 
-GRUB shows bootable snapshots via `grub-btrfsd` (watches `/.snapshots` with inotify).
+GUI: **btrfs-assistant** (installed in FULL mode).
 
-GUI management: **btrfs-assistant** (installed in FULL mode).
-
-Useful commands:
 ```bash
-snapper list                         # list all snapshots
+snapper list                               # list all snapshots
 snapper -c root create --description "before big change"
-snapper -c root status 5..6          # what changed between snapshots 5 and 6
-snapper -c root undochange 5..6      # undo those changes
+snapper -c root status 5..6               # what changed
+snapper -c root undochange 5..6           # roll back changes
 ```
-
----
-
-## pkg-files directory
-
-| File              | Installed by  | Notes                              |
-|-------------------|---------------|------------------------------------|
-| `pacman-pkgs.txt` | 1-setup.sh    | Base system, apps, gaming, Wine    |
-| `kde.txt`         | 2-user.sh     | KDE Plasma and applications        |
-| `aur-pkgs.txt`    | 2-user.sh     | Themes, tools (paru handles these) |
-
-Ham radio and GPS packages are not in these files — they're installed inline
-in `2-user.sh` based on your startup choices.
 
 ---
 
 ## Keyboard shortcut
 
-`Ctrl+Alt+T` → Konsole (set in `~/.config/kglobalshortcutsrc` at install).
+`Ctrl+Alt+T` → Konsole
+
+---
+
+## Browsers installed
+
+- **Firefox** — pacman (FULL install)
+- **Google Chrome** — AUR (FULL install)
