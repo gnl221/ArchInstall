@@ -8,16 +8,9 @@
 --END OF MINIMAL INSTALL--
 
 # ── Full: themes ──────────────────────────────────────────────────────────────
-# arc-kde: Arc Dark KDE Plasma theme + Aurorae window decoration + Kvantum theme
-arc-kde
-
-# arc-gtk-theme-git: GTK theme for Arc Dark (GTK2/3/4 apps inside Plasma)
-# Using -git version because the stable AUR package is flagged out of date.
-arc-gtk-theme-git
-
-# KDE Sweet theme — installed as an alternative, NOT set as default.
-# If these fail to build, install manually from https://store.kde.org/p/1294174
-# sweet-kde provides the Plasma theme; sweet-theme-git provides the GTK theme.
+# KDE Sweet — alternative theme, installed but not set as default.
+# Default theme is Breeze Dark (built into KDE, no package needed).
+# Apply via System Settings → Appearance → Global Theme → Sweet
 sweet-kde
 sweet-theme-git
 

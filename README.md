@@ -12,7 +12,7 @@ Boot the Arch ISO, connect to the internet, then:
 
 ```bash
 pacman -Sy --noconfirm git
-git clone https://github.com/YOUR_USER/ArchScript
+git clone https://github.com/YOUR_USER/ArchInstall
 cd ArchScript
 bash archinstall.sh
 ```
