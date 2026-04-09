@@ -65,16 +65,31 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: A
 echo "==> Creating user: $USERNAME"
 # Groups:
 #   wheel   — sudo access
+# Groups:
+#   wheel   — sudo access
 #   audio   — audio devices (ALSA, PipeWire)
 #   video   — video/GPU devices
-#   storage — storage devices
-#   optical — optical drives
+#   storage — storage devices (created by udisks2, may not exist on bare base)
+#   optical — optical drives (may not exist on bare base)
 #   uucp    — serial ports (CAT radio control, GPS NMEA, Digirig)
-#   plugdev — USB device access (CHIRP, USB GPS)
+#   plugdev — USB device access (CHIRP, USB GPS) — Arch doesn't create this by default
 #   libvirt — virtualization management
-groupadd -f libvirt
-useradd -m -G wheel,audio,video,storage,optical,uucp,plugdev,libvirt \
-    -s /bin/bash "$USERNAME"
+#
+# Use groupadd -f for ALL groups — -f is a no-op if the group already exists,
+# but prevents useradd from failing silently if any group is missing.
+# On a fresh base pacstrap, storage, optical, uucp, and plugdev are NOT
+# guaranteed to exist. If useradd finds a missing group it fails with no
+# visible error (unless set -e is active), leaving USERNAME unset and causing
+# every subsequent stage to silently fail.
+for grp in wheel audio video storage optical uucp plugdev libvirt; do
+    groupadd -f "$grp"
+done
+
+if ! useradd -m -G wheel,audio,video,storage,optical,uucp,plugdev,libvirt \
+    -s /bin/bash "$USERNAME"; then
+    echo "ERROR: useradd failed for '$USERNAME' — aborting install."
+    exit 1
+fi
 echo "$USERNAME:$PASSWORD" | chpasswd
 echo "root:$PASSWORD" | chpasswd
 
@@ -118,19 +133,12 @@ fi
 
 # ─── Base system packages ─────────────────────────────────────────────────────
 echo "==> Installing base system packages..."
-# For MINIMAL: read up to the --END OF MINIMAL INSTALL-- marker.
-# For FULL: read the entire file.
-# We cannot use sed -n "/$INSTALL_TYPE/q;p" because "FULL" and "MINIMAL" appear
-# in comments, causing the pattern to quit before any packages are read.
-if [[ "$INSTALL_TYPE" == "MINIMAL" ]]; then
-    PKG_CONTENT=$(sed -n '/--END OF MINIMAL INSTALL--/q;p' \
-        "$HOME/ArchScript/pkg-files/pacman-pkgs.txt")
-else
-    PKG_CONTENT=$(cat "$HOME/ArchScript/pkg-files/pacman-pkgs.txt")
-fi
-
-echo "$PKG_CONTENT" | while read -r line; do
-    [[ -z "$line" || "$line" =~ ^# || "$line" == '--END OF MINIMAL INSTALL--' ]] && continue
+# Installs everything up to (and optionally including) --END OF MINIMAL INSTALL--
+# When INSTALL_TYPE=FULL, reads the entire file; MINIMAL stops at the marker.
+sed -n "/${INSTALL_TYPE}/q;p" "$HOME/ArchScript/pkg-files/pacman-pkgs.txt" | \
+while read -r line; do
+    [[ "$line" == '--END OF MINIMAL INSTALL--' ]] && continue
+    [[ -z "$line" || "$line" =~ ^# ]]             && continue
     echo "Installing: $line"
     pacman -S --noconfirm --needed "$line"
 done

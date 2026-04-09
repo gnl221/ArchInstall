@@ -10,6 +10,15 @@ echo -ne "
   Stage 2: User Packages and Configuration
 ────────────────────────────────────────────
 "
+
+# Safety check: this script must run as the target user, not root.
+# If it's running as root it means Stage 1 failed to create the user account.
+if [[ "$(id -u)" == "0" ]]; then
+    echo "ERROR: Stage 2 is running as root — the user account was not created in Stage 1."
+    echo "       Check 1-setup.log for 'useradd' errors. Aborting."
+    exit 1
+fi
+
 source "$HOME/ArchScript/configs/setup.conf"
 export PATH="$PATH:$HOME/.local/bin"
 
