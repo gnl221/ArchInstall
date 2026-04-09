@@ -73,6 +73,7 @@ echo "==> Creating user: $USERNAME"
 #   plugdev — USB device access (CHIRP, USB GPS)
 #   libvirt — virtualization management
 groupadd -f libvirt
+groupadd -f plugdev  # Arch doesn't create this by default; needed for CHIRP/USB GPS
 useradd -m -G wheel,audio,video,storage,optical,uucp,plugdev,libvirt \
     -s /bin/bash "$USERNAME"
 echo "$USERNAME:$PASSWORD" | chpasswd
