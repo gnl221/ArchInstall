@@ -92,6 +92,7 @@ pacman -S --noconfirm --needed gptfdisk btrfs-progs
 pacstrap -K /mnt \
     base base-devel linux linux-firmware linux-headers \
     btrfs-progs \
+    git \
     vim nano sudo \
     archlinux-keyring wget \
     --noconfirm --needed
