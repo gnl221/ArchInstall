@@ -205,14 +205,6 @@ rm -rf "/home/$USERNAME/ArchScript"
 
 echo -ne "
 ────────────────────────────────────────────
-  Stage 3 complete.
-  Post-install notes:
-  • GRUB theme: place hex-arch files in
-      configs/boot/grub/themes/hex-arch/
-  • Plymouth theme: place arch-glow files in
-      configs/usr/share/plymouth/themes/arch-glow/
-  • Snapper: run 'snapper list' to verify.
-  • btrfs-assistant: GUI for snapshot management.
-  • Ctrl+Alt+T opens Konsole (set at first login).
+  Stage 3 complete. Reboot when ready.
 ────────────────────────────────────────────
 "
