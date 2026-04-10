@@ -39,14 +39,25 @@ echo "$KDE_CONTENT" | while read -r line; do
     sudo pacman -S --noconfirm --needed "$line"
 done
 
-# ─── Build and install paru ───────────────────────────────────────────────────
-echo "==> Building paru AUR helper..."
-cd ~
-git clone --depth=1 https://aur.archlinux.org/paru-bin.git
-cd paru-bin
+# ─── Build and install paru from source ──────────────────────────────────────
+# We do NOT use paru-bin. paru-bin is a pre-compiled binary linked against a
+# specific libalpm soname. When pacman updates and bumps the libalpm major
+# version, paru-bin breaks with "libalpm.so.XX: cannot open shared object file".
+# Building from source compiles against the locally installed libalpm so it
+# always matches. The rust toolchain is removed after the build to save ~1.5GB.
+echo "==> Installing rust toolchain for paru build..."
+sudo pacman -S --noconfirm --needed rust
+
+echo "==> Building paru from source..."
+cd /tmp
+git clone --depth=1 https://aur.archlinux.org/paru.git paru-src
+cd paru-src
 makepkg -si --noconfirm
 cd ~
-rm -rf paru-bin
+rm -rf /tmp/paru-src
+
+echo "==> Removing rust toolchain (no longer needed)..."
+sudo pacman -Rns --noconfirm rust 2>/dev/null || true
 
 # Configure paru
 mkdir -p "$HOME/.config/paru"
@@ -102,7 +113,7 @@ fi
 # ─── GPS support ──────────────────────────────────────────────────────────────
 if [[ "${USE_GPS:-NO}" == "YES" ]]; then
     echo "==> Installing GPS support..."
-    sudo pacman -S --noconfirm --needed gpsd python-gps chrony
+    sudo pacman -S --noconfirm --needed gpsd chrony
 
     # chrony.conf: GPS SHM refclock (NMEA on SHM 0, PPS on SHM 2)
     # Requires gpsd running. Adjust offset/delay per your GPS puck.

@@ -113,17 +113,36 @@ if [[ ! -d /sys/firmware/efi ]]; then
 fi
 
 # ─── Low memory: create swapfile ──────────────────────────────────────────────
+# The swapfile MUST live in its own dedicated BTRFS subvolume, NOT inside @.
+# BTRFS has a kernel-level hard restriction: you cannot snapshot a subvolume
+# that contains an active swapfile. If the swapfile is inside @, snapper can
+# never take a snapshot of / while the system is running.
 TOTAL_MEM=$(grep MemTotal /proc/meminfo | grep -o '[0-9]*')
 if [[ $TOTAL_MEM -lt 8000000 ]]; then
-    echo "==> Low memory detected (<8G). Creating 2G swapfile..."
-    mkdir -p /mnt/opt/swap
-    chattr +C /mnt/opt/swap          # BTRFS: disable COW on swap dir
-    dd if=/dev/zero of=/mnt/opt/swap/swapfile bs=1M count=2048 status=progress
-    chmod 600 /mnt/opt/swap/swapfile
-    chown root /mnt/opt/swap/swapfile
-    mkswap /mnt/opt/swap/swapfile
-    swapon /mnt/opt/swap/swapfile
-    echo "/opt/swap/swapfile  none  swap  sw  0  0" >> /mnt/etc/fstab
+    echo "==> Low memory detected (<8G). Creating 2G swapfile on dedicated subvolume..."
+
+    # Create a dedicated top-level subvolume for swap — excluded from snapshots
+    mount -t btrfs -o subvolid=5 "$ROOT_PART" /mnt/mnt
+    btrfs subvolume create /mnt/mnt/@swap
+    umount /mnt/mnt
+
+    # Mount the swap subvolume
+    mkdir -p /mnt/swap
+    mount -o "${MOUNT_OPTIONS},subvol=@swap" "$ROOT_PART" /mnt/swap
+
+    # Create the swapfile — chattr +C disables COW (required for BTRFS swapfiles)
+    chattr +C /mnt/swap
+    dd if=/dev/zero of=/mnt/swap/swapfile bs=1M count=2048 status=progress
+    chmod 600 /mnt/swap/swapfile
+    chown root /mnt/swap/swapfile
+    mkswap /mnt/swap/swapfile
+    swapon /mnt/swap/swapfile
+
+    # Add fstab entries for both the subvolume mount and the swapfile
+    echo "" >> /mnt/etc/fstab
+    echo "# Swap subvolume (own subvol so BTRFS can snapshot @ without conflict)" >> /mnt/etc/fstab
+    echo "UUID=$(blkid -s UUID -o value "$ROOT_PART")  /swap  btrfs  ${MOUNT_OPTIONS},subvol=@swap  0 0" >> /mnt/etc/fstab
+    echo "/swap/swapfile  none  swap  sw  0  0" >> /mnt/etc/fstab
 fi
 
 # ─── Copy scripts into new system ─────────────────────────────────────────────
