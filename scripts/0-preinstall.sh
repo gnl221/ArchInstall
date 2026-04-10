@@ -122,13 +122,15 @@ if [[ $TOTAL_MEM -lt 8000000 ]]; then
     echo "==> Low memory detected (<8G). Creating 2G swapfile on dedicated subvolume..."
 
     # Create a dedicated top-level subvolume for swap — excluded from snapshots
-    mount -t btrfs -o subvolid=5 "$ROOT_PART" /mnt/mnt
+    # Must mount at subvolid=5 (the BTRFS root) to create a top-level subvolume.
+    mkdir -p /mnt/mnt
+    mount -t btrfs -o subvolid=5 "$PART3" /mnt/mnt
     btrfs subvolume create /mnt/mnt/@swap
     umount /mnt/mnt
 
     # Mount the swap subvolume
     mkdir -p /mnt/swap
-    mount -o "${MOUNT_OPTIONS},subvol=@swap" "$ROOT_PART" /mnt/swap
+    mount -o "${MOUNT_OPTIONS},subvol=@swap" "$PART3" /mnt/swap
 
     # Create the swapfile — chattr +C disables COW (required for BTRFS swapfiles)
     chattr +C /mnt/swap
@@ -138,11 +140,13 @@ if [[ $TOTAL_MEM -lt 8000000 ]]; then
     mkswap /mnt/swap/swapfile
     swapon /mnt/swap/swapfile
 
-    # Add fstab entries for both the subvolume mount and the swapfile
+    # fstab: use PART3's UUID (not ROOT_PART — that variable doesn't exist)
+    SWAP_UUID=$(blkid -s UUID -o value "$PART3")
     echo "" >> /mnt/etc/fstab
     echo "# Swap subvolume (own subvol so BTRFS can snapshot @ without conflict)" >> /mnt/etc/fstab
-    echo "UUID=$(blkid -s UUID -o value "$ROOT_PART")  /swap  btrfs  ${MOUNT_OPTIONS},subvol=@swap  0 0" >> /mnt/etc/fstab
+    echo "UUID=${SWAP_UUID}  /swap  btrfs  ${MOUNT_OPTIONS},subvol=@swap  0 0" >> /mnt/etc/fstab
     echo "/swap/swapfile  none  swap  sw  0  0" >> /mnt/etc/fstab
+    echo "Swap fstab entry written with UUID: ${SWAP_UUID}"
 fi
 
 # ─── Copy scripts into new system ─────────────────────────────────────────────
