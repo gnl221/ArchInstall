@@ -68,6 +68,3 @@ kvantum
 
 # KDE theming
 packagekit-qt6
-
-# Discover software center
-discover
