@@ -8,10 +8,6 @@
 
 # ── Full: themes ──────────────────────────────────────────────────────────────
 # Default theme is Breeze Dark (built into KDE, no package needed).
-# Sweet KDE is installed as an alternative.
-# Apply via: System Settings → Appearance → Global Theme → Sweet
-sweet-kde
-sweet-theme-git
 
 # ── Full: fonts ───────────────────────────────────────────────────────────────
 ttf-meslo-nerd
