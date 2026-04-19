@@ -108,6 +108,12 @@ if [[ "$HAM_RADIO" == "YES" ]]; then
 
     # pat: Winlink email over radio (uses Direwolf for VHF packet)
     paru -S --noconfirm --needed pat-bin
+
+    # TrustedQSL: ARRL logginf software
+    paru -S --noconfirm --needed TrustedQSL
+
+    # gridtracker2: Tracking and logging helper for wsjt-x
+    paru -S --noconfirm --needed gridtracker2-bin
 fi
 
 # ─── GPS support ──────────────────────────────────────────────────────────────
