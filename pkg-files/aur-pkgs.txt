@@ -1,13 +1,10 @@
 # aur-pkgs.txt
 # AUR packages installed by 2-user.sh via paru.
-# Ham radio and GPS packages are handled separately based on install options.
+# Ham radio and GPS packages are in pkg-files/ham-radio.txt.
 
 # ── Minimal: no AUR packages required ─────────────────────────────────────────
 
 --END OF MINIMAL INSTALL--
-
-# ── Full: themes ──────────────────────────────────────────────────────────────
-# Default theme is Breeze Dark (built into KDE, no package needed).
 
 # ── Full: fonts ───────────────────────────────────────────────────────────────
 ttf-meslo-nerd

@@ -1,0 +1,45 @@
+# ham-radio.txt
+# Ham radio packages installed by 2-user.sh when HAM_RADIO=YES.
+# pacman packages are installed first, then AUR packages via paru.
+# GPS packages are handled separately in 2-user.sh (USE_GPS=YES).
+# Each package is installed individually so failures skip rather than abort.
+
+# ── pacman packages ────────────────────────────────────────────────────────────
+[pacman]
+hamlib
+python-pyserial
+python-requests
+python-pip
+
+# ── AUR packages ──────────────────────────────────────────────────────────────
+[aur]
+# direwolf: software TNC for APRS and packet radio (moved from official repos to AUR)
+direwolf
+
+# fldigi: multimode digital (PSK31, RTTY, CW, etc.) (moved from official repos to AUR)
+fldigi
+
+# wsjtx-improved: FT8, FT4, MSK144, WSPR, Q65
+# NOTE: build may fail if the PKGBUILD's boost dependency lags the installed boost.
+# If it fails, wsjtx is still available via the official WSJT-X release tarball
+# at https://wsjt.sourceforge.io/wsjtx.html
+wsjtx-improved
+
+# js8call-improved: active fork of JS8Call
+js8call-improved
+
+# chirp-next: radio programmer (AnyTone AT-778UV, Baofeng, etc.)
+chirp-next
+
+# pat: Winlink email over radio (uses Direwolf for VHF packet / ARDOP for HF)
+pat-bin
+
+# trustedqsl: TrustedQSL — ARRL Logbook of the World digital signing/upload tool
+# AUR package name is 'trustedqsl' (not 'tqsl')
+trustedqsl
+
+# gridtracker2-bin: GridTracker 2 companion for WSJT-X/JS8Call
+# WARNING: This AUR package has a history of dead download URLs.
+# If the build fails with a 404, download directly from https://gridtracker.org/downloads/
+# and extract to ~/.local/bin/GridTracker2/
+gridtracker2-bin

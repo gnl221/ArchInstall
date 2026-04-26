@@ -86,34 +86,25 @@ done
 
 # ─── Ham radio software ───────────────────────────────────────────────────────
 if [[ "$HAM_RADIO" == "YES" ]]; then
+    HAM_PKG="$HOME/ArchScript/pkg-files/ham-radio.txt"
+
     echo "==> Installing ham radio software (pacman)..."
-    sudo pacman -S --noconfirm --needed \
-        hamlib \
-        direwolf \
-        fldigi \
-        python-pyserial \
-        python-requests \
-        python-pip
+    # Read [pacman] section — lines between [pacman] and next [section] or EOF
+    awk '/^\[pacman\]/{found=1;next} /^\[/{found=0} found && /^[^#]/ && NF' \
+        "$HAM_PKG" | while read -r pkg; do
+        echo "Installing: $pkg"
+        sudo pacman -S --noconfirm --needed "$pkg" || \
+            echo "WARNING: pacman package '$pkg' failed — skipping"
+    done
 
     echo "==> Installing ham radio software (AUR)..."
-    # wsjtx-improved: FT8, FT4, MSK144, WSPR, Q65
-    # Note: wsjtx-improved-al-qt6 is the Qt6 build — swap if preferred
-    paru -S --noconfirm --needed wsjtx-improved
-
-    # js8call-improved: active fork of JS8Call
-    paru -S --noconfirm --needed js8call-improved
-
-    # chirp-next: radio programmer (AnyTone AT-778UV, Baofeng, etc.)
-    paru -S --noconfirm --needed chirp-next
-
-    # pat: Winlink email over radio (uses Direwolf for VHF packet)
-    paru -S --noconfirm --needed pat-bin
-
-    # TrustedQSL: ARRL logginf software
-    paru -S --noconfirm --needed TrustedQSL
-
-    # gridtracker2: Tracking and logging helper for wsjt-x
-    paru -S --noconfirm --needed gridtracker2-bin
+    # Read [aur] section — lines between [aur] and next [section] or EOF
+    awk '/^\[aur\]/{found=1;next} /^\[/{found=0} found && /^[^#]/ && NF' \
+        "$HAM_PKG" | while read -r pkg; do
+        echo "Installing (AUR): $pkg"
+        paru -S --noconfirm --needed "$pkg" || \
+            echo "WARNING: AUR package '$pkg' failed — skipping (check log for details)"
+    done
 fi
 
 # ─── GPS support ──────────────────────────────────────────────────────────────
@@ -168,13 +159,6 @@ EOF
 fi
 
 # ─── Themes ───────────────────────────────────────────────────────────────────
-echo "==> Installing themes..."
-
-# KDE Sweet — available as an alternative, not set as default.
-# Apply via: System Settings → Appearance → Global Theme → Sweet
-paru -S --noconfirm --needed sweet-kde sweet-theme-git || \
-    echo "WARNING: Sweet theme AUR build failed — install manually from https://store.kde.org/p/1294174"
-
 # ─── Apply Breeze Dark theme (built into KDE, no extra packages needed) ────────
 echo "==> Applying Breeze Dark theme..."
 
