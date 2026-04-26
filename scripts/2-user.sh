@@ -208,6 +208,12 @@ cp "$HOME/ArchScript/configs/_bashrc" "$HOME/.bashrc"
 # Also copy root's bashrc
 sudo cp "$HOME/ArchScript/configs/_bashrc" /root/.bashrc
 
+# ─── .vimrc ──────────────────────────────────────────────────────────────────
+echo "==> Installing .vimrc..."
+cp "$HOME/ArchScript/configs/_vimrc" "$HOME/.vimrc"
+# Also copy root's vimrc
+sudo cp "$HOME/ArchScript/configs/_vimrc" /root/.vimrc
+
 # ─── XDG user directories ─────────────────────────────────────────────────────
 xdg-user-dirs-update
 
